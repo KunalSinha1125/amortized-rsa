@@ -18,7 +18,7 @@ import vision
 import util
 from data import ShapeWorld
 import data
-    
+
 def compute_average_metrics(meters):
     metrics = {m: vs.avg for m, vs in meters.items()}
     metrics = {
@@ -31,14 +31,14 @@ def _collect_outputs(meters, outputs, vocab, img, y, lang, lang_length, lis_pred
     seq_prob = []
     for i,prob in enumerate(language_model.probability(lang,lang_length).cpu().numpy()):
         seq_prob.append(np.exp(prob))
-        
+
     if ci_listeners != None:
         ci = []
         for ci_listener in ci_listeners:
             correct = (ci_listener(img,lang,lang_length).argmax(1)==y)
             acc = correct.float().mean().item()
             ci.append(acc)
-            
+
     lang = lang.argmax(2)
     outputs['lang'].append(lang)
     outputs['pred'].append(lis_pred)
@@ -79,13 +79,13 @@ def _generate_utterance(token_1, token_2, batch_size, max_len):
 
 def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab, batch_size, cuda, num_samples = None, srr = True, lmbd = None, test_type = None, activation = 'gumbel', ci = True, dataset = 'shapeworld', penalty = None, tau = 1, generalization = None, debug = False):
     max_len = 40
-    
+
     if model_type == 'sample' or model_type == 'rsa':
         if generalization == None:
             internal_listener = torch.load('./models/'+dataset+'/literal_listener_0.pt')
         else:
             internal_listener = torch.load('./models/'+dataset+'/'+generalization+'_literal_listener_0.pt')
-    
+
     language_model = torch.load('./models/'+dataset+'/language_model.pt')
 
     if split == 'train':
@@ -137,10 +137,11 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                 dataloader = DataLoader(ShapeWorld(d, vocab), batch_size=batch_size, shuffle=False)
             else:
                 dataloader = DataLoader(ShapeWorld(d, vocab), batch_size=batch_size, shuffle=False)
-                
+
             for batch_i, (img, y, lang) in enumerate(dataloader):
-                batch_size = img.shape[0] 
-                
+                import pdb; pdb.set_trace()
+                batch_size = img.shape[0]
+
                 # Reformat inputs
                 y = y.argmax(1) # convert from onehot
                 img = img.float() # convert to float
@@ -157,7 +158,7 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                         for L in range(lang.shape[1]):
                             if lang[B][L].sum() == 0:
                                 lang[B][L][0] = 1
-                                
+
                 if cuda:
                     img = img.cuda()
                     y = y.cuda()
@@ -207,7 +208,7 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                                 lang, lang_length = _generate_utterance(color, None, batch_size, max_len)
                             else:
                                 lang0, lang_length0 = _generate_utterance(color, shape, batch_size, max_len)
-                                lang1, lang_length1 = _generate_utterance(shape, color, batch_size, max_len)       
+                                lang1, lang_length1 = _generate_utterance(shape, color, batch_size, max_len)
                                 lang = torch.cat((lang0.unsqueeze(0), lang1.unsqueeze(0)), 0)
                                 lang_length = torch.cat((lang_length0.unsqueeze(0), lang_length1.unsqueeze(0)), 0)
                             try:
@@ -246,12 +247,12 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                     this_loss = loss(lis_scores, y)
                     lis_pred = lis_scores.argmax(1)
                     this_acc = (lis_pred == y).float().mean().item()
-                    
+
                     if split == 'train':
                         # SGD step
                         this_loss.backward()
                         optimizer.step()
-                       
+
                     meters['loss'].update(this_loss, batch_size)
                     meters['acc'].update(this_acc, batch_size)
                 elif model_type == 's0' or model_type == 'language_model':
@@ -265,7 +266,7 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                         # SGD step
                         this_loss.backward()
                         optimizer.step()
-                        
+
                     this_acc = (lang_out.argmax(1)==lang.argmax(1)).float().mean().item()
 
                     meters['loss'].update(this_loss, batch_size)
@@ -300,14 +301,14 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                                 lang_length = lang_lengths.squeeze()
                         end = time.time()
                         lis_scores = listener(img, lang, lang_length)
-                        
+
                         # Evaluate loss and accuracy
                         lis_pred = lis_scores.argmax(1)
                         correct = (lis_pred == y)
                         this_acc = correct.float().mean().item()
                         this_loss = loss(lis_scores.cuda(), y.long())
                         this_acc = correct.float().mean().item()
-                                
+
                         if split == 'train':
                             # SGD step
                             this_loss.backward()
@@ -329,12 +330,12 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                             if activation != 'gumbel' and activation != None:
                                 lang = F.one_hot(lang_onehot, num_classes = len(vocab['w2i'].keys())).cuda().float()
                             lang_length = []
-                            for seq in lang_onehot: 
+                            for seq in lang_onehot:
                                 lang_length.append(np.where(seq.cpu()==data.EOS_IDX)[0][0]+1)
                             lang_length = torch.tensor(lang_length).cuda()
                             end = time.time()
                             lis_scores = listener(img, lang, lang_length)
-                            
+
                         # Evaluate loss and accuracy
                         if model_type == 'l0':
                             this_loss = loss(lis_scores, y.long())
@@ -367,16 +368,16 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                             this_loss = this_loss + eos_loss * float(lmbd)
                         else:
                             this_loss = loss(lis_scores, y.long())
-                            
+
                         lis_pred = lis_scores.argmax(1)
                         correct = (lis_pred == y)
                         this_acc = correct.float().mean().item()
-                        
+
                         if split == 'train':
                             # SGD step
                             this_loss.backward()
                             optimizer.step()
-                        
+
                         if split == 'test':
                             meters, outputs = _collect_outputs(meters, outputs, vocab, img, y, lang, lang_length, lis_pred, lis_scores, this_loss, this_acc, batch_size, ci_listeners, language_model, (end-start))
                         else:
@@ -384,7 +385,7 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                             meters['lm loss'].update(eos_loss*float(lmbd), batch_size)
                             meters['acc'].update(this_acc, batch_size)
                             meters['length'].update(lang_length.float().mean(), batch_size)
-        
+
     if split == 'test':
         meters['loss'] = np.array(meters['loss']).tolist()
         meters['prob'] = [prob for sublist in meters['prob'] for prob in sublist]

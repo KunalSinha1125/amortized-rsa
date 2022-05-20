@@ -139,7 +139,6 @@ def run(data_file, split, model_type, speaker, listener, optimizer, loss, vocab,
                 dataloader = DataLoader(ShapeWorld(d, vocab), batch_size=batch_size, shuffle=False)
 
             for batch_i, (img, y, lang) in enumerate(dataloader):
-                import pdb; pdb.set_trace()
                 batch_size = img.shape[0]
 
                 # Reformat inputs

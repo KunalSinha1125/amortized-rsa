@@ -483,7 +483,6 @@ class Listener(nn.Module):
         return feats_emb
 
     def forward(self, feats, lang, lang_length, average=False):
-        import pdb; pdb.set_trace()
         max_len=40
 
         if average:
@@ -505,6 +504,7 @@ class Listener(nn.Module):
 
         else:
             # Embed features
+            import pdb; pdb.set_trace()
             feats_emb = self.embed_features(feats)
 
             # Embed language
